@@ -10,23 +10,22 @@ from email.mime.multipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email import Encoders
 
-def buildMessage():
+def buildMessage(options):
     msg = MIMEMultipart()    
-    msg['Subject'] = 'Emails for today'
-    msg['From'] = 'nate@buildbotdatastax.com'
-    msg['To'] = 'nate@datastax.com, matt@datastax.com'
-    msg.preample = 'Emails for today'
+    msg['Subject'] = 'Mail including attachment'
+    msg['From'] = options.user
+    msg['To'] = options.recipients
+    msg.preample = 'Your mail attacment follows'
     return msg;
     
-def attachFileToPart():
-    fn = '/tmp/communityleads_'+date.today().strftime("%Y%m%d")+'.csv'
-    fp = open(fn, 'rb')
+def attachFileToPart(options):
+    fp = open(options.file, 'rb')
     part = MIMEBase('application', "octet-stream")
     part.set_payload( fp.read()  )
     fp.close()
 
     Encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(fn))
+    part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(options.file))
     return part;
 
 def doTransport(msg, options):    
@@ -36,7 +35,7 @@ def doTransport(msg, options):
     s.starttls()
     s.ehlo()
     s.login(options.user,options.password)
-    s.sendmail('nate@buildbot.datastax.com', [options.recipients.split(',')], msg.as_string())
+    s.sendmail('nate@buildbot.datastax.com', options.recipients.split(','), msg.as_string())
     s.quit()
 
 def main():
@@ -44,14 +43,17 @@ def main():
     parser.add_option("-u","--user", dest="user", help="Username for the mail account")
     parser.add_option("-p","--password", dest="password", help="Password for the mail account")
     parser.add_option("-r","--recipients", dest="recipients", help="Recipient email addresses (comma separated)")
+    parser.add_option("-f","--file",dest="file", help="Path to the file to attach")
     (options, args) = parser.parse_args()
     if not options.user or not options.password:
         parser.error("user and password are required")
     if not options.recipients:
         parser.error("At least one recipient must be defined")
-    print("args:",options.recipients.split(','))
-    msg = buildMessage();
-    part = attachFileToPart();
+    if not options.file:
+        parser.error("You must specify a file attachment")
+
+    msg = buildMessage(options);
+    part = attachFileToPart(options);
     msg.attach(part)
     doTransport(msg,options);
 
