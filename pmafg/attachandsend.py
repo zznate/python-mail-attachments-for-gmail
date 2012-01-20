@@ -35,7 +35,7 @@ def doTransport(msg, options):
     s.starttls()
     s.ehlo()
     s.login(options.user,options.password)
-    s.sendmail('nate@buildbot.datastax.com', options.recipients.split(','), msg.as_string())
+    s.sendmail(options.user, options.recipients.split(','), msg.as_string())
     s.quit()
 
 def main():
